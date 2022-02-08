@@ -1,0 +1,213 @@
+import 'package:flutter/material.dart';
+import 'package:another_flushbar/flushbar.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:date_field/date_field.dart';
+import 'package:intl/intl.dart';
+import 'package:o_color_picker/o_color_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:ugbs_dawuro_ios/providers/termpaper_provider.dart';
+import 'package:ugbs_dawuro_ios/widgets/reuseable_button.dart';
+
+import '../../constant.dart';
+
+class AddTermPaper extends StatefulWidget {
+  // const AddTermPaper({Key? key}) : super(key: key);
+
+  static const String id = 'add term paper';
+  @override
+  _AddTermPaperState createState() => _AddTermPaperState();
+}
+
+class _AddTermPaperState extends State<AddTermPaper> {
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
+
+  String? title, details, deadline;
+  DateTime? timed;
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _detailsController = TextEditingController();
+  final _deadlineController = TextEditingController();
+  DateTime? selectedDate;
+  Color? termPaperColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: kMainColor,
+        title: Text(
+          'ADD TERM PAPER',
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            letterSpacing: 1.2,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Form(
+        key: _formKey,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 50.0, horizontal: 15),
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                onChanged: (val) {
+                  title = val;
+                },
+                validator: (val) {
+                  if (val?.isEmpty ?? true) {
+                    return 'enter title';
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                  hintText: 'Enter Title for Term Paper',
+                  hintStyle: TextStyle(
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _detailsController,
+                maxLines: null,
+                onChanged: (val) {
+                  details = val;
+                },
+                validator: (val) {
+                  if (val?.isEmpty ?? true) {
+                    return 'enter details';
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                  hintText: 'Enter Details for Term Paper',
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 25, horizontal: 10),
+                  hintStyle: TextStyle(
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              DateTimeField(
+                onDateSelected: (DateTime date) {
+                  setState(() {
+                    selectedDate = date;
+                  });
+                },
+                selectedDate: selectedDate,
+                lastDate: DateTime(DateTime.now().year + 50),
+                firstDate: DateTime(1930),
+                mode: DateTimeFieldPickerMode.date,
+                decoration: InputDecoration(
+                  hintText: 'Deadline Date',
+                  hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ),
+              SizedBox(height: 20),
+              Text('Select Time'),
+              SizedBox(height: 5),
+              FormBuilderDateTimePicker(
+                name: 'time',
+                initialTime: TimeOfDay.now(),
+                fieldHintText: 'Add Time',
+                inputType: InputType.time,
+                decoration: InputDecoration(
+                  prefixIcon: Icon(Icons.access_time),
+                ),
+                onChanged: (val) {
+                  timed = val;
+                },
+              ),
+              SizedBox(height: 20),
+              GestureDetector(
+                  onTap: () {
+                    showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                              content: OColorPicker(
+                                selectedColor: termPaperColor,
+                                colors: primaryColorsPalette,
+                                onColorChange: (color) {
+                                  setState(() {
+                                    termPaperColor = color;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ));
+                  },
+                  child: Row(
+                    children: [
+                      Text('Select Color'),
+                      SizedBox(width: 10),
+                      Container(
+                        height: 30,
+                        width: 30,
+                        color: termPaperColor ?? Color(0xffffd428),
+                      )
+                    ],
+                  )),
+              SizedBox(height: 20),
+              ReusableButton(
+                label: 'Add Term Paper',
+                color: kMainColor,
+                textColor: Colors.white,
+                press: () async {
+                  if (_formKey.currentState!.validate()) {
+                    FocusScope.of(context).unfocus();
+                    Provider.of<TermPaperProvider>(context, listen: false)
+                        .addTermPaper(
+                      title: title,
+                      details: details,
+                      deadline: selectedDate,
+                      pending: false,
+                      termPaperColor: termPaperColor!.value,
+                      time: timed,
+                    );
+
+                    _titleController.clear();
+                    _detailsController.clear();
+                    _deadlineController.clear();
+
+                    showFlushBar();
+                  }
+                },
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  showFlushBar() {
+    return Flushbar(
+      title: 'Added Successful',
+      message: 'Your Term Paper has been Added successfully',
+      duration: Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      backgroundColor: kMainColor,
+      leftBarIndicatorColor: Colors.white,
+      icon: Icon(
+        Icons.info_outline,
+        size: 20,
+        color: Colors.white,
+      ),
+    )..show(context);
+  }
+}
